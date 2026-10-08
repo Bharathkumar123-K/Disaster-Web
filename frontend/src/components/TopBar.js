@@ -48,9 +48,33 @@ export default function TopBar() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [toastMessage, setToastMessage] = useState(null);
   const [copiedId, setCopiedId] = useState(false);
+  const [role, setRole] = useState('operator');
+  const [userSession, setUserSession] = useState({
+    name: 'Dispatcher Sarah Jenkins',
+    email: 'operator@nexuscommand.org',
+    badge: 'NX-8942-US',
+    role: 'operator'
+  });
 
   const profileRef = useRef(null);
   const searchRef = useRef(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('nexus_user');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed) {
+            setUserSession(parsed);
+            if (parsed.role) setRole(parsed.role);
+          }
+        } catch (err) {
+          console.error('Failed to parse user session in TopBar:', err);
+        }
+      }
+    }
+  }, []);
 
   // Close dropdowns on click outside
   useEffect(() => {
@@ -170,29 +194,51 @@ export default function TopBar() {
             <span style={{ fontSize: '0.78rem', fontWeight: 700 }}>SOCKET CONNECTED · 12ms</span>
           </div>
 
-          {/* Admin Portal Quick Button */}
-          <Link 
-            href="/admin"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.45rem',
-              background: 'rgba(245, 158, 11, 0.15)',
-              border: '1px solid rgba(245, 158, 11, 0.4)',
-              color: '#f59e0b',
-              padding: '0.45rem 0.9rem',
-              borderRadius: '20px',
-              fontSize: '0.8rem',
-              fontWeight: 800,
-              textDecoration: 'none',
-              letterSpacing: '0.05em',
-              transition: 'all 0.2s ease',
-              boxShadow: '0 0 12px rgba(245, 158, 11, 0.2)'
-            }}
-          >
-            <Shield size={15} color="#f59e0b" />
-            <span>ADMIN PORTAL</span>
-          </Link>
+          {/* Role Quick Badge Button */}
+          {role === 'admin' ? (
+            <Link 
+              href="/admin"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                background: 'rgba(245, 158, 11, 0.15)',
+                border: '1px solid rgba(245, 158, 11, 0.4)',
+                color: '#f59e0b',
+                padding: '0.45rem 0.9rem',
+                borderRadius: '20px',
+                fontSize: '0.8rem',
+                fontWeight: 800,
+                textDecoration: 'none',
+                letterSpacing: '0.05em',
+                transition: 'all 0.2s ease',
+                boxShadow: '0 0 12px rgba(245, 158, 11, 0.2)'
+              }}
+            >
+              <Shield size={15} color="#f59e0b" />
+              <span>ADMIN PORTAL</span>
+            </Link>
+          ) : (
+            <div 
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                background: 'rgba(56, 189, 248, 0.15)',
+                border: '1px solid rgba(56, 189, 248, 0.4)',
+                color: '#38bdf8',
+                padding: '0.45rem 0.9rem',
+                borderRadius: '20px',
+                fontSize: '0.8rem',
+                fontWeight: 800,
+                letterSpacing: '0.05em',
+                boxShadow: '0 0 12px rgba(56, 189, 248, 0.2)'
+              }}
+            >
+              <Radio size={15} color="#38bdf8" />
+              <span>OPERATOR PORTAL</span>
+            </div>
+          )}
 
           {/* Search Box Container */}
           <div ref={searchRef} style={{ position: 'relative' }}>
@@ -489,23 +535,23 @@ export default function TopBar() {
                       width: '46px',
                       height: '46px',
                       borderRadius: '50%',
-                      background: 'rgba(16, 185, 129, 0.2)',
+                      background: role === 'admin' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(56, 189, 248, 0.2)',
                       display: 'flex',
                       alignItems: 'center',
                       justify: 'center',
-                      border: '2px solid var(--accent-color)',
+                      border: role === 'admin' ? '2px solid #f59e0b' : '2px solid #38bdf8',
                       fontWeight: '800',
                       fontSize: '1.1rem',
-                      color: 'var(--accent-color)'
+                      color: role === 'admin' ? '#f59e0b' : '#38bdf8'
                     }}>
-                      SJ
+                      {userSession.name ? userSession.name.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase() : 'OP'}
                     </div>
                     <div>
                       <h4 style={{ fontSize: '1rem', fontWeight: '800', margin: 0, color: '#ffffff' }}>
-                        Cmdr. Sarah Jenkins
+                        {userSession.name || 'Dispatcher Sarah Jenkins'}
                       </h4>
                       <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '2px 0 0' }}>
-                        Lead Dispatch Officer
+                        {role === 'admin' ? 'Chief System Director' : 'Lead Dispatch Operator'}
                       </p>
                     </div>
                   </div>
@@ -520,9 +566,16 @@ export default function TopBar() {
                     fontSize: '0.75rem',
                     border: '1px solid rgba(255, 255, 255, 0.06)'
                   }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>BADGE: <strong style={{ color: '#fff' }} className="font-mono">NX-8942-US</strong></span>
-                    <span style={{ background: 'var(--accent-color)', color: '#fff', padding: '0.15rem 0.5rem', borderRadius: '10px', fontSize: '0.68rem', fontWeight: '800' }}>
-                      LEVEL 5 ADMIN
+                    <span style={{ color: 'var(--text-secondary)' }}>BADGE: <strong style={{ color: '#fff' }} className="font-mono">{userSession.badge || 'NX-8942-US'}</strong></span>
+                    <span style={{ 
+                      background: role === 'admin' ? '#f59e0b' : '#38bdf8', 
+                      color: role === 'admin' ? '#000000' : '#0b0f19', 
+                      padding: '0.15rem 0.5rem', 
+                      borderRadius: '10px', 
+                      fontSize: '0.68rem', 
+                      fontWeight: '800' 
+                    }}>
+                      {role === 'admin' ? 'LEVEL 0 ADMIN' : 'DISPATCH OPERATOR'}
                     </span>
                   </div>
                 </div>
@@ -562,31 +615,33 @@ export default function TopBar() {
                     </div>
                   </button>
 
-                  {/* Settings Link */}
-                  <Link
-                    href="/dashboard/settings"
-                    onClick={() => setIsProfileOpen(false)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      padding: '0.65rem 0.85rem',
-                      borderRadius: '10px',
-                      textDecoration: 'none',
-                      color: 'var(--text-primary)',
-                      fontSize: '0.88rem',
-                      fontWeight: '500',
-                      transition: 'background 0.15s'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                  >
-                    <Settings size={18} color="var(--text-secondary)" />
-                    <div style={{ flex: 1 }}>
-                      <div>Command Center Settings</div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Configure dispatch threshold & APIs</div>
-                    </div>
-                  </Link>
+                  {/* Settings Link (Admin Only) */}
+                  {role === 'admin' && (
+                    <Link
+                      href="/dashboard/settings"
+                      onClick={() => setIsProfileOpen(false)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        padding: '0.65rem 0.85rem',
+                        borderRadius: '10px',
+                        textDecoration: 'none',
+                        color: 'var(--text-primary)',
+                        fontSize: '0.88rem',
+                        fontWeight: '500',
+                        transition: 'background 0.15s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <Settings size={18} color="var(--text-secondary)" />
+                      <div style={{ flex: 1 }}>
+                        <div>Command Center Settings</div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Configure dispatch threshold & APIs</div>
+                      </div>
+                    </Link>
+                  )}
 
                   {/* Toggle Audio Notifications */}
                   <button

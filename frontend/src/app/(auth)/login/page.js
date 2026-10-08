@@ -120,48 +120,45 @@ function LoginForm() {
     }
   };
 
-  // Authenticate user with role verification
-  const handleSubmit = (e) => {
+  // Authenticate user with real backend MongoDB & RBAC role verification
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
     setIsLoading(true);
 
-    setTimeout(() => {
-      let accounts = [...PRESET_ACCOUNTS];
+    try {
+      const res = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password })
+      });
 
-      // Merge user signups from localStorage
-      if (typeof window !== 'undefined') {
-        const storedUsers = localStorage.getItem('nexus_registered_users');
-        if (storedUsers) {
-          try {
-            const parsed = JSON.parse(storedUsers);
-            if (Array.isArray(parsed)) {
-              accounts = [...accounts, ...parsed];
-            }
-          } catch (err) {
-            console.error('Error parsing stored users:', err);
-          }
-        }
-      }
+      const data = await res.json();
 
-      const inputEmail = email.trim().toLowerCase();
-      const userAccount = accounts.find(acc => acc.email.toLowerCase() === inputEmail);
-
-      // Check credential validity
-      if (!userAccount || userAccount.password !== password) {
+      if (!res.ok || !data.success) {
         setIsLoading(false);
-        setErrorMsg('Authentication Failed: Invalid Email / Account ID or Password.');
+        setErrorMsg(data.error || 'Authentication Failed: Invalid Email / Account ID or Password.');
         return;
       }
 
-      // Check role authorization (Role-Based Authentication)
-      if (userAccount.role !== role) {
+      const user = data.user;
+      const userAccountType = (user.accountType || 'Operator').toLowerCase();
+      const selectedPortalRole = role.toLowerCase();
+
+      // Check role authorization (RBAC)
+      if (selectedPortalRole === 'admin' && userAccountType !== 'admin') {
         setIsLoading(false);
-        setErrorMsg(`Access Denied: Your account is assigned to the ${userAccount.role.toUpperCase()} role, which does not match the selected ${role.toUpperCase()} portal.`);
+        setErrorMsg(`Access Denied: Your account is assigned to the ${userAccountType.toUpperCase()} role, which does not have Admin Portal privileges.`);
         return;
       }
 
-      // Successful Auth
+      if (selectedPortalRole === 'operator' && userAccountType === 'citizen') {
+        setIsLoading(false);
+        setErrorMsg('Access Denied: Citizen accounts cannot access the Operator Command Center.');
+        return;
+      }
+
+      // Save user session and token
       if (typeof window !== 'undefined') {
         if (rememberMe) {
           localStorage.setItem('nexus_remembered_email', email);
@@ -170,26 +167,61 @@ function LoginForm() {
         }
 
         const userSession = {
-          role: userAccount.role,
-          email: userAccount.email,
-          name: userAccount.name,
-          badge: userAccount.badge
+          _id: user._id,
+          role: userAccountType,
+          accountType: user.accountType,
+          operationalRole: user.operationalRole,
+          clearanceLevel: user.clearanceLevel,
+          email: user.email,
+          name: user.name,
+          agency: user.agency,
+          badge: user.securityToken || `NX-${user.clearanceLevel || 1}-CLEARANCE`
         };
         localStorage.setItem('nexus_user', JSON.stringify(userSession));
+        localStorage.setItem('nexus_token', data.token);
       }
 
       // Redirect to specific dashboard
-      if (role === 'admin') {
+      if (selectedPortalRole === 'admin' || userAccountType === 'admin') {
         router.push('/admin');
-      } else if (role === 'citizen') {
+      } else if (selectedPortalRole === 'citizen' || userAccountType === 'citizen') {
         router.push('/citizen');
-      } else if (role === 'operator') {
-        router.push('/dashboard');
       } else {
         router.push('/dashboard');
       }
-    }, 450);
+    } catch (err) {
+      console.error('[Login Submit Error]:', err);
+      // Fallback for offline mode or fallback demo credentials
+      let accounts = [...PRESET_ACCOUNTS];
+      const inputEmail = email.trim().toLowerCase();
+      const userAccount = accounts.find(acc => acc.email.toLowerCase() === inputEmail);
+
+      if (!userAccount || userAccount.password !== password) {
+        setIsLoading(false);
+        setErrorMsg('Authentication Failed: Invalid Email / Account ID or Password.');
+        return;
+      }
+
+      if (userAccount.role !== role) {
+        setIsLoading(false);
+        setErrorMsg(`Access Denied: Your account is assigned to the ${userAccount.role.toUpperCase()} role.`);
+        return;
+      }
+
+      const userSession = {
+        role: userAccount.role,
+        email: userAccount.email,
+        name: userAccount.name,
+        badge: userAccount.badge
+      };
+      localStorage.setItem('nexus_user', JSON.stringify(userSession));
+      if (role === 'admin') router.push('/admin');
+      else if (role === 'citizen') router.push('/citizen');
+      else router.push('/dashboard');
+    }
+    setIsLoading(false);
   };
+
 
   // Handle Password Reset Request
   const handleResetSubmit = (e) => {

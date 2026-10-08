@@ -30,7 +30,19 @@ export default function LocationSearchInput({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Debounced Nominatim Geocoding Search scoped to India
+  // Helper to sanitize regional script characters (Tamil, Devanagari, etc.) into clean English
+  const sanitizeEnglishLocation = (str) => {
+    if (!str) return '';
+    const cleaned = str
+      .replace(/[\u0900-\u0DFF]/g, '') // Strip Indic script characters
+      .replace(/\s+/g, ' ')
+      .replace(/,\s*,/g, ',')
+      .replace(/^[\s,]+|[\s,]+$/g, '')
+      .trim();
+    return cleaned || str;
+  };
+
+  // Debounced Nominatim Geocoding Search scoped to India in English
   useEffect(() => {
     if (!query || query.trim().length < 2) {
       setSuggestions([]);
@@ -40,9 +52,13 @@ export default function LocationSearchInput({
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&countrycodes=in&limit=6&q=${encodeURIComponent(query)}`);
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&accept-language=en&countrycodes=in&limit=6&q=${encodeURIComponent(query)}`);
         const data = await res.json();
-        setSuggestions(data || []);
+        const formattedSuggestions = (data || []).map(item => ({
+          ...item,
+          display_name: sanitizeEnglishLocation(item.display_name)
+        }));
+        setSuggestions(formattedSuggestions);
         setIsOpen(true);
       } catch (err) {
         console.error('Geocoding error:', err);
@@ -66,16 +82,17 @@ export default function LocationSearchInput({
       async (position) => {
         const { latitude, longitude } = position.coords;
         try {
-          // Reverse geocoding via Nominatim
-          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+          // Reverse geocoding via Nominatim in English
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&accept-language=en&lat=${latitude}&lon=${longitude}`);
           const data = await res.json();
-          const placeName = data.display_name ? data.display_name.split(',').slice(0, 3).join(',') : `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+          const rawDisplayName = sanitizeEnglishLocation(data.display_name);
+          const placeName = rawDisplayName ? rawDisplayName.split(',').slice(0, 3).join(',').trim() : `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
 
           const locResult = {
             city: placeName,
             lat: latitude,
             lng: longitude,
-            displayName: data.display_name
+            displayName: rawDisplayName || placeName
           };
 
           setQuery(placeName);
@@ -99,13 +116,14 @@ export default function LocationSearchInput({
   const handleSelectSuggestion = (item) => {
     const lat = parseFloat(item.lat);
     const lng = parseFloat(item.lon);
-    const placeName = item.display_name.split(',').slice(0, 3).join(',');
+    const cleanDisplayName = sanitizeEnglishLocation(item.display_name);
+    const placeName = cleanDisplayName.split(',').slice(0, 3).join(',').trim();
 
     const locResult = {
       city: placeName,
       lat,
       lng,
-      displayName: item.display_name
+      displayName: cleanDisplayName
     };
 
     setQuery(placeName);

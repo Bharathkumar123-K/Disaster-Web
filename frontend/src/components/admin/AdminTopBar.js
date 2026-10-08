@@ -1,5 +1,7 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAdmin } from './AdminProvider';
 import { 
   ShieldCheck, 
@@ -10,10 +12,12 @@ import {
   User, 
   CheckCircle,
   PlusCircle,
-  Power
+  Power,
+  LogOut
 } from 'lucide-react';
 
 export default function AdminTopBar() {
+  const router = useRouter();
   const { 
     overview, 
     loading, 
@@ -22,6 +26,45 @@ export default function AdminTopBar() {
     setIsInjectModalOpen, 
     setIsFreezeModalOpen 
   } = useAdmin();
+
+  // Dynamic logged-in user profile session
+  const [userSession, setUserSession] = useState({
+    name: 'Cmdr. Rajesh Sharma',
+    email: 'admin@nexuscommand.org',
+    badge: 'DIR-ROOT-CLEARANCE-0'
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('nexus_user');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed && parsed.name) {
+            setUserSession(parsed);
+          }
+        } catch (err) {
+          console.error('Failed to parse logged in user session:', err);
+        }
+      }
+    }
+  }, []);
+
+  const getInitials = (nameStr) => {
+    if (!nameStr) return 'AD';
+    const cleanName = nameStr.replace(/^(Dr\.|Cmdr\.|Director|Officer|Operator)\s+/i, '').trim();
+    const parts = cleanName.split(' ').filter(Boolean);
+    if (parts.length === 0) return 'AD';
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+
+  const handleLogout = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('nexus_user');
+    }
+    router.push('/login');
+  };
 
   return (
     <header className="topbar" style={{ borderBottom: '1px solid rgba(245, 158, 11, 0.2)', background: 'rgba(9, 13, 22, 0.95)' }}>
@@ -108,16 +151,40 @@ export default function AdminTopBar() {
           <RefreshCw size={14} className={loading ? 'animate-spin-slow' : ''} />
         </button>
 
-        {/* Admin Profile */}
+        {/* Dynamic Admin Profile from Login Session */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', borderLeft: '1px solid var(--border-color)', paddingLeft: '1rem' }}>
           <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', fontWeight: 800, fontSize: '0.85rem' }}>
-            SJ
+            {getInitials(userSession.name)}
           </div>
           <div>
-            <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#ffffff' }}>Dr. Sarah Jenkins</div>
-            <div style={{ fontSize: '0.68rem', color: '#f59e0b', fontWeight: 600 }}>Chief System Director</div>
+            <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#ffffff' }}>{userSession.name}</div>
+            <div style={{ fontSize: '0.68rem', color: '#f59e0b', fontWeight: 600 }}>{userSession.badge || 'Chief System Director'}</div>
           </div>
         </div>
+
+        {/* Logout Button */}
+        <button 
+          onClick={handleLogout}
+          title="Logout of Admin Command Portal"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            background: 'rgba(244, 63, 94, 0.15)',
+            border: '1px solid rgba(244, 63, 94, 0.35)',
+            color: '#f43f5e',
+            padding: '0.5rem 0.85rem',
+            borderRadius: '8px',
+            fontSize: '0.8rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            marginLeft: '0.25rem',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <LogOut size={15} />
+          <span>Logout</span>
+        </button>
       </div>
 
       {/* Toast Notification */}

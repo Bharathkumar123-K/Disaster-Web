@@ -16,6 +16,8 @@ import {
   MapPin
 } from 'lucide-react';
 
+import NexusSelect from '../../../components/NexusSelect';
+
 export default function AdminIncidentsPage() {
   const { incidents, fetchIncidents, showToast } = useAdmin();
   const [selectedIds, setSelectedIds] = useState([]);
@@ -23,6 +25,7 @@ export default function AdminIncidentsPage() {
   const [severityFilter, setSeverityFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+
 
   useEffect(() => {
     fetchIncidents({
@@ -134,30 +137,49 @@ export default function AdminIncidentsPage() {
 
           {/* Select Filters */}
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <select className="form-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ width: 'auto' }}>
-              <option value="all">All Statuses</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="dismissed">Dismissed</option>
-            </select>
+            <div style={{ minWidth: '150px' }}>
+              <NexusSelect 
+                value={statusFilter} 
+                onChange={(e, val) => setStatusFilter(val)}
+                options={[
+                  { value: 'all', label: 'All Statuses' },
+                  { value: 'pending', label: 'Pending' },
+                  { value: 'approved', label: 'Approved' },
+                  { value: 'dismissed', label: 'Dismissed' }
+                ]}
+              />
+            </div>
 
-            <select className="form-select" value={severityFilter} onChange={e => setSeverityFilter(e.target.value)} style={{ width: 'auto' }}>
-              <option value="all">All Severities</option>
-              <option value="critical">Critical</option>
-              <option value="high">High</option>
-              <option value="medium">Medium</option>
-              <option value="low">Low</option>
-            </select>
+            <div style={{ minWidth: '150px' }}>
+              <NexusSelect 
+                value={severityFilter} 
+                onChange={(e, val) => setSeverityFilter(val)}
+                options={[
+                  { value: 'all', label: 'All Severities' },
+                  { value: 'critical', label: 'Critical' },
+                  { value: 'high', label: 'High' },
+                  { value: 'medium', label: 'Medium' },
+                  { value: 'low', label: 'Low' }
+                ]}
+              />
+            </div>
 
-            <select className="form-select" value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} style={{ width: 'auto' }}>
-              <option value="all">All Categories</option>
-              <option value="flood">Flood</option>
-              <option value="cyclone">Cyclone</option>
-              <option value="fire">Fire</option>
-              <option value="collapse">Collapse</option>
-              <option value="roadblock">Roadblock</option>
-            </select>
+            <div style={{ minWidth: '160px' }}>
+              <NexusSelect 
+                value={categoryFilter} 
+                onChange={(e, val) => setCategoryFilter(val)}
+                options={[
+                  { value: 'all', label: 'All Categories' },
+                  { value: 'flood', label: 'Flood' },
+                  { value: 'cyclone', label: 'Cyclone' },
+                  { value: 'fire', label: 'Fire' },
+                  { value: 'collapse', label: 'Collapse' },
+                  { value: 'roadblock', label: 'Roadblock' }
+                ]}
+              />
+            </div>
           </div>
+
         </div>
 
         {/* Bulk Action Controls */}

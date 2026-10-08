@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import LocationSearchInput from '../../components/LocationSearchInput';
 import ReliefFundPanel from '../../components/ReliefFundPanel';
+import NexusSelect from '../../components/NexusSelect';
+
 
 const presetLocations = [
   { city: 'Mumbai, Maharashtra', lat: 19.0760, lng: 72.8777 },
@@ -81,6 +83,11 @@ export default function CitizenPortalPage() {
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      if (file.size > 50 * 1024 * 1024) {
+        showToast('File size exceeds 50MB limit');
+        return;
+      }
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
       setSelectedFile(file);
       setPreviewUrl(URL.createObjectURL(file));
     }
@@ -93,6 +100,46 @@ export default function CitizenPortalPage() {
       return;
     }
     setIsSubmitting(true);
+
+    let uploadedMediaEvidence = [];
+    let permanentMediaUrl = '';
+
+    // If citizen selected a file, upload actual File object first
+    if (selectedFile) {
+      try {
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+
+        const uploadRes = await fetch('http://localhost:5000/api/incidents/upload-media', {
+          method: 'POST',
+          body: formData
+        });
+
+        const uploadData = await uploadRes.json();
+
+        if (!uploadRes.ok || !uploadData.success) {
+          showToast(`Media upload failed: ${uploadData.error || 'Upload error'}`);
+          setIsSubmitting(false);
+          return; // Do not submit report on media upload failure!
+        }
+
+        const mediaItem = uploadData.data || uploadData;
+        uploadedMediaEvidence = [{
+          mediaId: mediaItem.mediaId,
+          url: mediaItem.url,
+          type: mediaItem.type,
+          originalName: mediaItem.originalName || selectedFile.name,
+          uploadedAt: new Date()
+        }];
+        permanentMediaUrl = mediaItem.url;
+      } catch (uploadErr) {
+        console.error('File upload error:', uploadErr);
+        showToast('Media upload failed — check network connection');
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
     try {
       const res = await fetch('http://localhost:5000/api/citizen/reports', {
         method: 'POST',
@@ -108,7 +155,8 @@ export default function CitizenPortalPage() {
           peopleAffected,
           citizenName,
           citizenPhone,
-          mediaUrl: previewUrl || 'https://disaster.gov.in/media-proof.jpg'
+          mediaUrl: permanentMediaUrl,
+          mediaEvidence: uploadedMediaEvidence
         })
       });
       const data = await res.json();
@@ -117,9 +165,12 @@ export default function CitizenPortalPage() {
         setTitle('');
         setText('');
         setSelectedFile(null);
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
         setPreviewUrl(null);
         fetchMyReports();
         setActiveTab('track');
+      } else {
+        showToast(`Failed to file report: ${data.error || 'Server error'}`);
       }
     } catch (err) {
       showToast('Failed to file report');
@@ -199,24 +250,33 @@ export default function CitizenPortalPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div className="form-group" style={{ margin: 0 }}>
                   <label className="form-label">Disaster Category</label>
-                  <select className="form-select" value={category} onChange={e => setCategory(e.target.value)}>
-                    <option value="flood">Flood / Waterlogging</option>
-                    <option value="fire">Commercial Fire</option>
-                    <option value="collapse">Building Collapse / Landslide</option>
-                    <option value="cyclone">Cyclone Storm</option>
-                    <option value="medical">Medical Emergency</option>
-                  </select>
+                  <NexusSelect 
+                    value={category} 
+                    onChange={(e, val) => setCategory(val)}
+                    options={[
+                      { value: 'flood', label: 'Flood / Waterlogging' },
+                      { value: 'fire', label: 'Commercial Fire' },
+                      { value: 'collapse', label: 'Building Collapse / Landslide' },
+                      { value: 'cyclone', label: 'Cyclone Storm' },
+                      { value: 'medical', label: 'Medical Emergency' }
+                    ]}
+                  />
                 </div>
 
                 <div className="form-group" style={{ margin: 0 }}>
                   <label className="form-label">Distress Level</label>
-                  <select className="form-select" value={severity} onChange={e => setSeverity(e.target.value)}>
-                    <option value="medium">Medium (Requires Assistance)</option>
-                    <option value="high">High (Urgent Rescue Needed)</option>
-                    <option value="critical">Critical (Life Threatening SOS)</option>
-                  </select>
+                  <NexusSelect 
+                    value={severity} 
+                    onChange={(e, val) => setSeverity(val)}
+                    options={[
+                      { value: 'medium', label: 'Medium (Requires Assistance)' },
+                      { value: 'high', label: 'High (Urgent Rescue Needed)' },
+                      { value: 'critical', label: 'Critical (Life Threatening SOS)' }
+                    ]}
+                  />
                 </div>
               </div>
+
 
               <div className="form-group" style={{ margin: 0 }}>
                 <label className="form-label">Search Indian Location (City, District, State) or Use GPS</label>
@@ -380,28 +440,79 @@ export default function CitizenPortalPage() {
 
                   {/* Rescue Progression Timeline Bar */}
                   <div style={{ background: 'rgba(0, 0, 0, 0.4)', borderRadius: '12px', padding: '1.25rem', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
-                    <div style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '1rem' }}>
-                      Rescue Operations Progression
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                      <div style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                        Rescue Operations Progression
+                      </div>
+                      <span style={{
+                        fontSize: '0.75rem',
+                        fontWeight: 800,
+                        padding: '0.2rem 0.65rem',
+                        borderRadius: '10px',
+                        background: report.status === 'rejected' || report.status === 'dismissed' ? 'rgba(239,68,68,0.2)' : report.status === 'approved' || report.status === 'response_assigned' || report.status === 'responding' ? 'rgba(16,185,129,0.2)' : report.status === 'resolved' ? 'rgba(56,189,248,0.2)' : 'rgba(245,158,11,0.2)',
+                        color: report.status === 'rejected' || report.status === 'dismissed' ? '#ef4444' : report.status === 'approved' || report.status === 'response_assigned' || report.status === 'responding' ? '#10b981' : report.status === 'resolved' ? '#38bdf8' : '#f59e0b',
+                        border: report.status === 'rejected' || report.status === 'dismissed' ? '1px solid rgba(239,68,68,0.4)' : report.status === 'approved' || report.status === 'response_assigned' || report.status === 'responding' ? '1px solid rgba(16,185,129,0.4)' : report.status === 'resolved' ? '1px solid rgba(56,189,248,0.4)' : '1px solid rgba(245,158,11,0.4)'
+                      }}>
+                        {report.status === 'rejected' || report.status === 'dismissed' ? '❌ REJECTED' : report.status === 'approved' ? '✅ APPROVED' : report.status === 'response_assigned' ? '🚒 RESPONSE ASSIGNED' : report.status === 'responding' ? '⚡ RESPONDING' : report.status === 'resolved' ? '🟢 RESOLVED' : '⏳ PENDING REVIEW'}
+                      </span>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', textAlign: 'center', position: 'relative' }}>
-                      
-                      <div style={{ padding: '0.65rem', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#10b981', fontSize: '0.8rem', fontWeight: 700 }}>
-                        ✓ 1. Report Submitted
-                      </div>
 
-                      <div style={{ padding: '0.65rem', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#10b981', fontSize: '0.8rem', fontWeight: 700 }}>
-                        ✓ 2. AI Triage Verified
+                    {/* Rejection Notice Banner */}
+                    {(report.status === 'rejected' || report.status === 'dismissed') ? (
+                      <div style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.35)', borderRadius: '10px', padding: '0.85rem 1rem', color: '#fca5a5', fontSize: '0.85rem' }}>
+                        <div style={{ fontWeight: 800, color: '#ef4444', marginBottom: '0.2rem' }}>❌ Report Rejected</div>
+                        <div>Reason: <strong style={{ color: '#ffffff' }}>"{report.rejectionReason || 'Duplicate or invalid report'}"</strong></div>
+                        {report.rejectedBy && (
+                          <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', marginTop: '0.25rem' }}>
+                            Reviewed by: {report.rejectedBy} {report.rejectedAt ? `on ${new Date(report.rejectedAt).toLocaleString()}` : ''}
+                          </div>
+                        )}
                       </div>
+                    ) : (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', textAlign: 'center', position: 'relative' }}>
+                        
+                        <div style={{ padding: '0.65rem', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#10b981', fontSize: '0.8rem', fontWeight: 700 }}>
+                          ✓ 1. Submitted
+                        </div>
 
-                      <div style={{ padding: '0.65rem', borderRadius: '8px', background: report.status === 'approved' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)', border: report.status === 'approved' ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(245, 158, 11, 0.3)', color: report.status === 'approved' ? '#10b981' : '#f59e0b', fontSize: '0.8rem', fontWeight: 700 }}>
-                        {report.status === 'approved' ? '✓ 3. NDRF Unit Dispatched' : '⏳ 3. Awaiting Dispatch'}
+                        <div style={{ 
+                          padding: '0.65rem', 
+                          borderRadius: '8px', 
+                          background: report.status === 'approved' || report.status === 'response_assigned' || report.status === 'responding' || report.status === 'resolved' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)', 
+                          border: report.status === 'approved' || report.status === 'response_assigned' || report.status === 'responding' || report.status === 'resolved' ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(245, 158, 11, 0.3)', 
+                          color: report.status === 'approved' || report.status === 'response_assigned' || report.status === 'responding' || report.status === 'resolved' ? '#10b981' : '#f59e0b', 
+                          fontSize: '0.8rem', 
+                          fontWeight: 700 
+                        }}>
+                          {report.status === 'approved' || report.status === 'response_assigned' || report.status === 'responding' || report.status === 'resolved' ? '✓ 2. Approved' : '⏳ 2. Pending Review'}
+                        </div>
+
+                        <div style={{ 
+                          padding: '0.65rem', 
+                          borderRadius: '8px', 
+                          background: report.status === 'response_assigned' || report.status === 'responding' || report.status === 'resolved' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.04)', 
+                          border: report.status === 'response_assigned' || report.status === 'responding' || report.status === 'resolved' ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid var(--border-color)', 
+                          color: report.status === 'response_assigned' || report.status === 'responding' || report.status === 'resolved' ? '#10b981' : 'var(--text-muted)', 
+                          fontSize: '0.8rem', 
+                          fontWeight: 700 
+                        }}>
+                          {report.status === 'response_assigned' || report.status === 'responding' || report.status === 'resolved' ? '✓ 3. Dispatched' : '3. Unit Dispatch'}
+                        </div>
+
+                        <div style={{ 
+                          padding: '0.65rem', 
+                          borderRadius: '8px', 
+                          background: report.status === 'resolved' ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255, 255, 255, 0.04)', 
+                          border: report.status === 'resolved' ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid var(--border-color)', 
+                          color: report.status === 'resolved' ? '#38bdf8' : 'var(--text-muted)', 
+                          fontSize: '0.8rem', 
+                          fontWeight: 600 
+                        }}>
+                          {report.status === 'resolved' ? '🟢 4. Resolved' : '4. Rescue Resolved'}
+                        </div>
+
                       </div>
-
-                      <div style={{ padding: '0.65rem', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.04)', border: '1px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600 }}>
-                        4. Rescue Resolved
-                      </div>
-
-                    </div>
+                    )}
                   </div>
                 </div>
               ))

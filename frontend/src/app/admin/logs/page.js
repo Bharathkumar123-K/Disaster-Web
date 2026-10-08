@@ -13,6 +13,8 @@ import {
   AlertTriangle
 } from 'lucide-react';
 
+import NexusSelect from '../../../components/NexusSelect';
+
 export default function AdminLogsPage() {
   const { logs, fetchLogs, showToast } = useAdmin();
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -20,6 +22,7 @@ export default function AdminLogsPage() {
   const filteredLogs = logs.filter(log => {
     return categoryFilter === 'all' || log.category === categoryFilter;
   });
+
 
   const handleClearLogs = async () => {
     if (!confirm('Are you sure you want to clear historical audit logs? (Security logs will be retained)')) return;
@@ -82,20 +85,22 @@ export default function AdminLogsPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <Filter size={16} color="#f59e0b" />
           <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#ffffff' }}>Filter Category:</span>
-          <select 
-            className="form-select" 
-            value={categoryFilter} 
-            onChange={e => setCategoryFilter(e.target.value)}
-            style={{ width: 'auto' }}
-          >
-            <option value="all">All Categories ({logs.length})</option>
-            <option value="SECURITY">Security & Access</option>
-            <option value="INGESTION">Ingestion Streams</option>
-            <option value="AI_ENGINE">AI Calibration</option>
-            <option value="INCIDENT_OVERRIDE">Incident Override</option>
-            <option value="USER_MGMT">User Management</option>
-          </select>
+          <div style={{ minWidth: '220px' }}>
+            <NexusSelect 
+              value={categoryFilter} 
+              onChange={(e, val) => setCategoryFilter(val)}
+              options={[
+                { value: 'all', label: `All Categories (${logs.length})` },
+                { value: 'SECURITY', label: 'Security & Access' },
+                { value: 'INGESTION', label: 'Ingestion Streams' },
+                { value: 'AI_ENGINE', label: 'AI Calibration' },
+                { value: 'INCIDENT_OVERRIDE', label: 'Incident Override' },
+                { value: 'USER_MGMT', label: 'User Management' }
+              ]}
+            />
+          </div>
         </div>
+
 
         <button onClick={fetchLogs} style={{ background: 'none', border: 'none', color: 'var(--accent-color)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
           Refresh Audit Trail

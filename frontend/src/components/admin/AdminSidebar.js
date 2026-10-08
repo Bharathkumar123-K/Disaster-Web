@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { 
   ShieldAlert, 
   Activity, 
@@ -12,11 +12,20 @@ import {
   Lock, 
   ArrowLeft,
   Server,
-  Zap
+  Zap,
+  LogOut
 } from 'lucide-react';
 
 export default function AdminSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('nexus_user');
+    }
+    router.push('/login');
+  };
 
   const navItems = [
     { href: '/admin', label: 'Overview & Telemetry', icon: Activity, badge: 'ROOT' },
@@ -86,8 +95,8 @@ export default function AdminSidebar() {
         })}
       </nav>
 
-      {/* Node Status Box */}
-      <div style={{ padding: '1rem', borderTop: 'var(--border-color)', background: 'rgba(0, 0, 0, 0.3)' }}>
+      {/* Node Status Box & Logout */}
+      <div style={{ padding: '1rem', borderTop: 'var(--border-color)', background: 'rgba(0, 0, 0, 0.3)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
         <div style={{
           background: 'rgba(15, 23, 42, 0.8)',
           border: '1px solid rgba(245, 158, 11, 0.2)',
@@ -105,6 +114,29 @@ export default function AdminSidebar() {
             Superuser Session: Active
           </div>
         </div>
+
+        <button 
+          onClick={handleLogout}
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem',
+            background: 'rgba(244, 63, 94, 0.15)',
+            border: '1px solid rgba(244, 63, 94, 0.35)',
+            color: '#f43f5e',
+            padding: '0.65rem',
+            borderRadius: '10px',
+            fontSize: '0.82rem',
+            fontWeight: 800,
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <LogOut size={16} />
+          <span>Exit / Logout</span>
+        </button>
       </div>
     </aside>
   );

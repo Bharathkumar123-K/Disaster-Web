@@ -5,6 +5,8 @@ import { useAdmin } from './AdminProvider';
 import { X, Send, AlertOctagon, MapPin, Layers, Users, Navigation } from 'lucide-react';
 import LocationSearchInput from '../LocationSearchInput';
 
+import NexusSelect from '../NexusSelect';
+
 export default function InjectIncidentModal() {
   const { isInjectModalOpen, setIsInjectModalOpen, injectIncident } = useAdmin();
 
@@ -79,23 +81,31 @@ export default function InjectIncidentModal() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div className="form-group">
               <label className="form-label">Disaster Category</label>
-              <select className="form-select" value={category} onChange={e => setCategory(e.target.value)}>
-                <option value="flood">Flood / Inundation</option>
-                <option value="cyclone">Cyclone / Storm</option>
-                <option value="fire">Fire / Hazmat</option>
-                <option value="collapse">Landslide / Collapse</option>
-                <option value="roadblock">Road Blockade / Transit</option>
-              </select>
+              <NexusSelect 
+                value={category} 
+                onChange={(e, val) => setCategory(val)}
+                options={[
+                  { value: 'flood', label: 'Flood / Inundation' },
+                  { value: 'cyclone', label: 'Cyclone / Storm' },
+                  { value: 'fire', label: 'Fire / Hazmat' },
+                  { value: 'collapse', label: 'Landslide / Collapse' },
+                  { value: 'roadblock', label: 'Road Blockade / Transit' }
+                ]}
+              />
             </div>
 
             <div className="form-group">
               <label className="form-label">Severity Level</label>
-              <select className="form-select" value={severity} onChange={e => setSeverity(e.target.value)}>
-                <option value="low">Low (Monitoring)</option>
-                <option value="medium">Medium (Moderate)</option>
-                <option value="high">High (Urgent Dispatch)</option>
-                <option value="critical">Critical (Emergency Priority)</option>
-              </select>
+              <NexusSelect 
+                value={severity} 
+                onChange={(e, val) => setSeverity(val)}
+                options={[
+                  { value: 'low', label: 'Low (Monitoring)' },
+                  { value: 'medium', label: 'Medium (Moderate)' },
+                  { value: 'high', label: 'High (Urgent Dispatch)' },
+                  { value: 'critical', label: 'Critical (Emergency Priority)' }
+                ]}
+              />
             </div>
           </div>
 
@@ -130,14 +140,19 @@ export default function InjectIncidentModal() {
 
           <div className="form-group" style={{ marginTop: '1rem' }}>
             <label className="form-label">Recommended Response Department</label>
-            <select className="form-select" value={agency} onChange={e => setAgency(e.target.value)}>
-              <option value="NDRF">NDRF (National Disaster Response Force)</option>
-              <option value="SDRF">SDRF (State Relief Unit)</option>
-              <option value="Coast Guard">Indian Coast Guard</option>
-              <option value="Fire Department">Fire & Emergency Services</option>
-              <option value="Medical Airwing">108 Emergency Airwing</option>
-            </select>
+            <NexusSelect 
+              value={agency} 
+              onChange={(e, val) => setAgency(val)}
+              options={[
+                { value: 'NDRF', label: 'NDRF (National Disaster Response Force)' },
+                { value: 'SDRF', label: 'SDRF (State Relief Unit)' },
+                { value: 'Coast Guard', label: 'Indian Coast Guard' },
+                { value: 'Fire Department', label: 'Fire & Emergency Services' },
+                { value: 'Medical Airwing', label: '108 Emergency Airwing' }
+              ]}
+            />
           </div>
+
 
           <div className="form-group">
             <label className="form-label">Incident Description & Telemetry</label>

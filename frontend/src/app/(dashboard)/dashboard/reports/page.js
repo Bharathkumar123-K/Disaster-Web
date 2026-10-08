@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useDisaster } from '../../../../components/DisasterProvider';
 import { ShieldAlert, Search, Filter, ArrowUpDown, Eye, MapPin, CheckCircle, XCircle, Clock } from 'lucide-react';
+import NexusSelect from '../../../../components/NexusSelect';
+
 
 export default function ReportsPage() {
   const { events, loading, searchQuery, setSearchQuery, setSelectedEvent } = useDisaster();
@@ -42,20 +44,20 @@ export default function ReportsPage() {
 
           {/* Controls / Filter Bar */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255, 255, 255, 0.04)', padding: '0.4rem 0.85rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
-              <Filter size={14} color="var(--text-secondary)" />
-              <select 
+            <div style={{ minWidth: '160px' }}>
+              <NexusSelect 
                 value={selectedSeverity} 
-                onChange={(e) => setSelectedSeverity(e.target.value)}
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: '0.82rem', outline: 'none', cursor: 'pointer', fontWeight: 600 }}
-              >
-                <option value="all" style={{ background: '#0f172a', color: '#fff' }}>All Severities</option>
-                <option value="critical" style={{ background: '#0f172a', color: '#fff' }}>Critical</option>
-                <option value="high" style={{ background: '#0f172a', color: '#fff' }}>High</option>
-                <option value="medium" style={{ background: '#0f172a', color: '#fff' }}>Medium</option>
-                <option value="low" style={{ background: '#0f172a', color: '#fff' }}>Low</option>
-              </select>
+                onChange={(e, val) => setSelectedSeverity(val)}
+                options={[
+                  { value: 'all', label: 'All Severities' },
+                  { value: 'critical', label: 'Critical' },
+                  { value: 'high', label: 'High' },
+                  { value: 'medium', label: 'Medium' },
+                  { value: 'low', label: 'Low' }
+                ]}
+              />
             </div>
+
 
             {searchQuery && (
               <div style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid var(--accent-color)', padding: '0.4rem 0.85rem', borderRadius: '10px', fontSize: '0.82rem', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>

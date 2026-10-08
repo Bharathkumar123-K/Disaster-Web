@@ -1,5 +1,6 @@
 import { AdminProvider } from '../../components/admin/AdminProvider';
 import AdminShell from '../../components/admin/AdminShell';
+import AdminGuard from '../../components/AdminGuard';
 
 export const metadata = {
   title: "NEXUS ADMIN PORTAL - System Governance & Control",
@@ -8,10 +9,13 @@ export const metadata = {
 
 export default function AdminLayout({ children }) {
   return (
-    <AdminProvider>
-      <AdminShell>
-        {children}
-      </AdminShell>
-    </AdminProvider>
+    <AdminGuard>
+      <AdminProvider>
+        <AdminShell>
+          {children}
+        </AdminShell>
+      </AdminProvider>
+    </AdminGuard>
   );
 }
+

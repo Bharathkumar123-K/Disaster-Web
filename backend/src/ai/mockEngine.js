@@ -24,32 +24,32 @@ const severities = ['low', 'medium', 'high', 'critical'];
 const depts = ['NDRF', 'SDRF', 'Fire', 'Ambulance', 'Police', 'Coast Guard'];
 
 async function processRawPost(rawPost) {
-  // Pick random Indian location template
   const locObj = faker.helpers.arrayElement(indianLocations);
   const severity = faker.helpers.arrayElement(severities);
   
-  // Add small random offset around city center
   const lat = locObj.lat + (Math.random() - 0.5) * 0.1;
   const lng = locObj.lng + (Math.random() - 0.5) * 0.1;
 
+  let priorityLevel = 'routine';
+  if (severity === 'high') priorityLevel = 'urgent';
+  if (severity === 'critical') priorityLevel = 'emergency';
+
   const classified = await ClassifiedEvent.create({
     rawPostId: rawPost._id,
-    sourceType: rawPost.source,
+    sourceType: rawPost.source || 'AI_DETECTED',
+    title: `${rawPost.source || 'External'} Emergency Signal`,
     text: locObj.text,
     url: rawPost.url || 'https://disaster.gov.in',
     category: locObj.category,
     location: { type: 'Point', coordinates: [lng, lat] },
     locationName: locObj.city,
     severity,
+    priorityLevel,
     peopleAffected: faker.number.int({ min: 10, max: 1200 }),
     confidenceScore: faker.number.int({ min: 65, max: 98 }),
-    status: 'pending'
+    status: 'pending',
+    isSimulated: true
   });
-
-  // Simulate Recommendation Engine
-  let priorityLevel = 'routine';
-  if (severity === 'high') priorityLevel = 'urgent';
-  if (severity === 'critical') priorityLevel = 'emergency';
 
   const recommendation = await Recommendation.create({
     eventId: classified._id,
